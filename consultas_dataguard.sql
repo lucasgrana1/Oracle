@@ -1,0 +1,87 @@
+--# SEMPRE OBSERVAR O ALERT.LOG DA BASE STANDBY
+
+Wed Nov 10 06:52:31 2021
+RFS[2]: Selected log 4 FOR thread 2 SEQUENCE 124736 dbid 73056059 branch 936213307 <<<=== Archive identificado para cópia
+Wed Nov 10 06:52:31 2021
+Media Recovery Waiting FOR thread 2 SEQUENCE 124736 (IN transit)                   <<<=== Archive em trânsito (sendo copiado)
+Wed Nov 10 06:52:38 2021
+Recovery OF Online Redo Log: Thread 2 GROUP 4 Seq 124736 Reading mem 0             <<<=== Archive aplicado na base Standby
+Mem# 0: +RECO/CDBPMZ_GRU18M/ONLINELOG/group_4.266.1042043091
+
+
+
+
+
+
+
+
+
+
+
+
+
+--#STATUS DOS PROCESSOS
+SET LINES 190 PAGES 1000 LONG 100000 FEED 1 ECHO ON TI ON TIMI ON TRIM ON TERM ON SERVEROUT ON VER ON TAB OFF DESC LINENUM ON
+SELECT PROCESS, STATUS, THREAD#, SEQUENCE#, DELAY_MINS, BLOCK#, BLOCKS
+FROM V$MANAGED_STANDBY;
+
+
+
+--#STATUS DO ATRASO
+SET PAGES 1000
+SET LINES 169
+COL NAME FORMAT A30
+COL VALUE FORMAT A30
+SELECT NAME, VALUE, TIME_COMPUTED, DATUM_TIME
+FROM V$DATAGUARD_STATS
+WHERE NAME LIKE '%LAG%'
+ORDER BY 1;
+
+
+
+
+--#GAP (BURACO) NA SEQUÊNCIA DE ARCHIVES (CONSULTA DEMORADA)
+SET PAGES 1000
+SET LINES 169
+SELECT *
+FROM V$ARCHIVE_GAP;
+
+
+
+
+
+--#ÚLTIMO CHECKPOINT
+SET PAGES 1000
+SET LINES 169
+ALTER SESSION SET NLS_DATE_FORMAT='DD/MM/YYYY HH24:MI:SS';
+SELECT MAX(CHECKPOINT_TIME) AS CHECKPOINT_TIME
+FROM V$DATAFILE_HEADER;
+
+
+
+
+
+--#TEMPO DO ÚLTIMO REGISTRO DE REDO APLICADO ÚLTIMO RECOVERY
+SET LINES 190 PAGES 1000 LONG 100000 FEED 1 ECHO ON TI ON TIMI ON TRIM ON TERM ON SERVEROUT ON VER ON TAB OFF DESC LINENUM ONcol start_time FOR a20
+col TYPE FOR a25
+col item FOR a25
+col units FOR a15
+SELECT inst_id, to_char(start_time,'yyyy/mm/dd hh24:mi:ss') AS start_time, TYPE, item, units, sofar, total, MAX(to_char(TIMESTAMP,'yyyy/mm/dd hh24:mi:ss')) AS ultimo_recovery
+FROM gv$recovery_progress
+GROUP BY inst_id, to_char(start_time,'yyyy/mm/dd hh24:mi:ss'), TYPE, item, units, sofar, total;
+
+
+
+
+--# RESTART DA BASE
+
+shutdown abort;
+
+
+startup nomount;
+
+
+ALTER DATABASE mount standby DATABASE;
+
+
+SELECT open_mode FROM v$database;

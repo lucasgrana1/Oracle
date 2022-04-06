@@ -1,0 +1,2 @@
+--# SID DA SESSAO DO USUARIO
+select SYS_CONTEXT('USERENV', 'SID') from dual ;

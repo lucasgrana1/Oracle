@@ -1,0 +1,2 @@
+--# TRUNCANDO UMA TABELA
+TRUNCATE TABLE hr.employees;
